@@ -1,32 +1,31 @@
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
+import java.io.*;
+import java.util.*;
+
+
 
 public class Imperialroads8196 {
+	
 	public static class Edge implements Comparable<Edge>{
 		int src;
 		int dest;
 		int weight;
 		@Override
 		public int compareTo(Edge o) {
-			// TODO Auto-generated method stub
 			return Integer.compare(weight, o.weight);
 		}
 		@Override
 		public String toString() {
-			// TODO Auto-generated method stub
+			
 			return src+"_"+dest+"_"+weight;
 		}
 	}
 	public static class Graf{
-		ArrayList<Edge>[] aristas;
 		HashMap<String,Edge> edges2;
 		ArrayList<Edge> edges;
+		ArrayList<Integer>[] aristas;
+		int[] positionway;
+		HashMap<String, Integer> memo;
+		int roots[];
 		int weight;
 		int v;
 		int e;
@@ -34,6 +33,12 @@ public class Imperialroads8196 {
 		public Graf(int v,int e) {
 			this.v=v;
 			this.e=e;
+			roots=new int[v];
+			for (int i = 0; i < roots.length; i++) {
+				roots[i]=i;
+			}
+			positionway=new int[v];
+			memo=new HashMap<>();
 			edges=new ArrayList<>();
 			edges2=new HashMap<>();
 			aristas=new ArrayList[v];
@@ -49,50 +54,54 @@ public class Imperialroads8196 {
 			n.src=i;
 			n.dest= j;
 			n.weight=w;
-			Edge n1=new Edge();
-			n1.src=j;
-			n1.dest=i;
-			n1.weight=w;
+			if(roots[j]==j) {
+				roots[j]=i;
+			}else if(roots[i]==i) {
+				roots[i]=j;
+			}
 			edges2.put(getKey(i, j), n);
 			edges.add(n);
-			ArrayList<Edge> p1=aristas[i];
-			if(p1==null) {
-				p1=new ArrayList<>();
+			ArrayList<Integer> ars=aristas[i];
+			ArrayList<Integer> ars1=aristas[j];
+			if(ars==null) {
+				ars=new ArrayList<>();
 			}
-			p1.add(n);
-			aristas[i]=p1;
-			ArrayList<Edge> p2=aristas[j];
-			if(p2==null) {
-				p2=new ArrayList<>();
+			if(ars1==null) {
+				ars1=new ArrayList<>();
 			}
-			p2.add(n1);
-			aristas[j]=p2;
+			ars.add(j);
+			ars1.add(i);
+			aristas[i]=ars;
+			aristas[j]=ars1;
 		}
-		int DFS(int i,int j,Edge e,boolean[] mar) {
+		int response(int i,int j) {
 			if(i==j) {
-				mar[i]=true;
-				return e!=null?e.weight:-1;
-			}
-			if(!mar[i]) {
-				mar[i]=true;
-				int max=-1;
-				ArrayList<Edge> ady=aristas[i];
-				for (int k = 0; k < ady.size(); k++) {
-					Edge tmp=ady.get(k);
-					if(!mar[tmp.dest]) {
-						int v=DFS(tmp.dest, j, tmp, mar);
-						if(v!=-1)
-						{
-							max=Math.max(tmp.weight, v);
-							break;
-						}
-							
-					}
-				}
-				return max;
+				return 0;
 			}else {
-				return -1;
+				int p=roots[i];
+				return Math.max(edges2.get(getKey(i, p)).weight,response(p, j));
 			}
+		}
+		void way(int a,boolean mar[],int[] i,int ret[],HashMap<Integer,Integer> con) {
+			if(!mar[a]) {
+				mar[a]=true;
+				ret[i[0]]=i[0];
+				positionway[a]=i[0];
+				con.put(i[0],a);
+				
+			}else {
+				ret[i[0]]=ret[positionway[a]];
+			}
+			ArrayList<Integer> ady=aristas[a];
+			for (int j = 0; j < ady.size(); j++) {
+				if(!mar[ady.get(j)]) {
+					i[0]++;
+					way(ady.get(j), mar, i, ret,con);
+					ret[i[0]]=ret[positionway[a]];
+				}
+			
+			}
+			i[0]=i[0]+1;
 			
 		}
 		Graf MST() {
@@ -100,11 +109,12 @@ public class Imperialroads8196 {
 
 				@Override
 				public int compare(Edge o1, Edge o2) {
-					// TODO Auto-generated method stub
+					
 					return o1.compareTo(o2);
 				}
 			});
 			int[] union=new int[v];
+			
 			for (int i = 0; i < union.length; i++) {
 				union[i]=i;
 			}
@@ -130,7 +140,9 @@ public class Imperialroads8196 {
 		if (union[t1] == t1) {
 			return t1;
 		} else {
-			return getR(union, union[t1]);
+			int p=getR(union, union[t1]);
+			union[t1]=p;
+			return p;
 		}
 	}
 	public static void main(String[] args) throws IOException {
@@ -152,14 +164,30 @@ public class Imperialroads8196 {
 			
 		}
 		Graf gfT=gf.MST();
+		int[] way=new int[2*v-1];
+		HashMap<Integer,Integer> inv=new HashMap<>();
+		gfT.way(0, new boolean[v], new int[1], way,inv);
+		SegmentTree sgt=new SegmentTree(0, way.length-1);
+		
+		for (int i = 0; i < way.length; i++) {
+			sgt.set(i,way[i]);
+		}
 		int q=Integer.parseInt(br.readLine());
 		for (int i = 0; i < q; i++) {
 			String[] query=br.readLine().split(" ");
 			int s=Integer.parseInt(query[0]);
 			int d=Integer.parseInt(query[1]);
-			int val=gfT.DFS(s-1, d-1, null, new boolean[v]);
-			int ret=gfT.weight-val+gf.edges2.get(gfT.getKey(s-1, d-1)).weight;
-			bw.write(ret+"\n");
+			if(!gfT.edges2.containsKey(gfT.getKey(s-1, d-1))) {
+				int cpV=sgt.getMax(gfT.positionway[s-1], gfT.positionway[d-1]);
+				int cp=inv.get(cpV);
+				int val=Math.max(gfT.response(s-1, cp),gfT.response(d-1, cp));
+				int ret=gfT.weight-val+gf.edges2.get(gfT.getKey(s-1, d-1)).weight;
+				bw.write(ret+"\n");
+			}else {
+				int ret=gfT.weight;
+				bw.write(ret+"\n");
+			}
+		
 		}
 	}
 		
@@ -168,4 +196,61 @@ public class Imperialroads8196 {
 		bw.close();
 	}
 
+	static class SegmentTree {
+		int start, end;
+		SegmentTree leftTree, rightTree;
+		int maxValue;
+
+		public SegmentTree(int start, int end) {
+			this.start = start;
+			this.end = end;
+			this.maxValue=Integer.MIN_VALUE;
+			if(start == end) {  // es una hoja
+				leftTree = rightTree = null;
+				return;
+			}
+			int mid = (start + end) / 2;
+			leftTree = new SegmentTree(start, mid);
+			rightTree = new SegmentTree(mid + 1, end);
+
+		}
+
+		public void set(int pos, int value) {
+			// es una hoja, CASO BASE
+			if(start == end) {
+				maxValue=value;
+				return;
+			}
+
+			int mid = (start + end) / 2;
+
+			if(pos <= mid)
+				leftTree.set(pos, value);
+			else
+				rightTree.set(pos, value);
+
+			maxValue=Math.max(leftTree.maxValue, rightTree.maxValue);
+				
+
+		}
+		public int getMax(int low, int high) {
+
+			
+			if(start == low && end == high)
+				return maxValue;
+
+			int mid = (start + end) / 2;
+
+			if(high <= mid)
+				return leftTree.getMax(low, high);
+
+			if(low > mid)
+				return rightTree.getMax(low, high);
+
+			int leftMin = leftTree.getMax(low, mid);
+			int rightMin = rightTree.getMax(mid+1, high);
+			return Math.max(leftMin, rightMin);
+
+		}
+	}
 }
