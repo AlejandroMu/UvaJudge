@@ -3,6 +3,7 @@ import java.util.*;
 
 
 
+
 public class Imperialroads8196 {
 	
 	public static class Edge implements Comparable<Edge>{
@@ -34,9 +35,6 @@ public class Imperialroads8196 {
 			this.v=v;
 			this.e=e;
 			roots=new int[v];
-			for (int i = 0; i < roots.length; i++) {
-				roots[i]=i;
-			}
 			positionway=new int[v];
 			memo=new HashMap<>();
 			edges=new ArrayList<>();
@@ -54,11 +52,6 @@ public class Imperialroads8196 {
 			n.src=i;
 			n.dest= j;
 			n.weight=w;
-			if(roots[j]==j) {
-				roots[j]=i;
-			}else if(roots[i]==i) {
-				roots[i]=j;
-			}
 			edges2.put(getKey(i, j), n);
 			edges.add(n);
 			ArrayList<Integer> ars=aristas[i];
@@ -82,26 +75,26 @@ public class Imperialroads8196 {
 				return Math.max(edges2.get(getKey(i, p)).weight,response(p, j));
 			}
 		}
-		void way(int a,boolean mar[],int[] i,int ret[],HashMap<Integer,Integer> con) {
+		void way(int a,boolean mar[],int[] i,int way[],HashMap<Integer,Integer> V,HashMap<Integer,Integer> VR) {
 			if(!mar[a]) {
 				mar[a]=true;
-				ret[i[0]]=i[0];
+				V.put(a,i[1]);
+				VR.put(i[1],a);
+				way[i[0]]=i[1];
 				positionway[a]=i[0];
-				con.put(i[0],a);
-				
-			}else {
-				ret[i[0]]=ret[positionway[a]];
-			}
-			ArrayList<Integer> ady=aristas[a];
-			for (int j = 0; j < ady.size(); j++) {
-				if(!mar[ady.get(j)]) {
-					i[0]++;
-					way(ady.get(j), mar, i, ret,con);
-					ret[i[0]]=ret[positionway[a]];
+				i[0]++;
+				i[1]++;
+				ArrayList<Integer> ady= aristas[a];
+				for (int j = 0; j < ady.size(); j++) {
+					if(!mar[ady.get(j)]) {
+						roots[ady.get(j)]=a;
+						way(ady.get(j), mar, i, way, V, VR);
+						way[i[0]]=V.get(a);
+						i[0]++;
+					}
 				}
-			
+				
 			}
-			i[0]=i[0]+1;
 			
 		}
 		Graf MST() {
@@ -133,9 +126,18 @@ public class Imperialroads8196 {
 			}
 			return n;
 		}
-
+		public int getRoot() {
+			int ret=0;
+			for (int i = 0; i < roots.length; i++) {
+				if(roots[i]==i) {
+					return i;
+				}
+			}
+			return ret;
+		}
 		
 	}
+	
 	private static int getR(int[] union, int t1) {
 		if (union[t1] == t1) {
 			return t1;
@@ -166,7 +168,8 @@ public class Imperialroads8196 {
 		Graf gfT=gf.MST();
 		int[] way=new int[2*v-1];
 		HashMap<Integer,Integer> inv=new HashMap<>();
-		gfT.way(0, new boolean[v], new int[1], way,inv);
+		HashMap<Integer,Integer> primeravez=new HashMap<>();
+		gfT.way(0, new boolean[v], new int[2], way,primeravez,inv);
 		SegmentTree sgt=new SegmentTree(0, way.length-1);
 		
 		for (int i = 0; i < way.length; i++) {
@@ -178,10 +181,15 @@ public class Imperialroads8196 {
 			int s=Integer.parseInt(query[0]);
 			int d=Integer.parseInt(query[1]);
 			if(!gfT.edges2.containsKey(gfT.getKey(s-1, d-1))) {
-				int cpV=sgt.getMax(gfT.positionway[s-1], gfT.positionway[d-1]);
+				int pS=gfT.positionway[s-1];
+				int pD=gfT.positionway[d-1];
+				int cpV=sgt.getMin(Math.min(pS, pD), Math.max(pS, pD));
 				int cp=inv.get(cpV);
 				int val=Math.max(gfT.response(s-1, cp),gfT.response(d-1, cp));
-				int ret=gfT.weight-val+gf.edges2.get(gfT.getKey(s-1, d-1)).weight;
+				Edge ed=gf.edges2.get(gf.getKey(s-1, d-1));
+				boolean exist=ed!=null;
+				int sum=exist?ed.weight:0;
+				int ret=gfT.weight-val+sum;
 				bw.write(ret+"\n");
 			}else {
 				int ret=gfT.weight;
@@ -199,11 +207,13 @@ public class Imperialroads8196 {
 	static class SegmentTree {
 		int start, end;
 		SegmentTree leftTree, rightTree;
+		int minValue;
 		int maxValue;
 
 		public SegmentTree(int start, int end) {
 			this.start = start;
 			this.end = end;
+			this.minValue = Integer.MAX_VALUE;
 			this.maxValue=Integer.MIN_VALUE;
 			if(start == end) {  // es una hoja
 				leftTree = rightTree = null;
@@ -218,6 +228,7 @@ public class Imperialroads8196 {
 		public void set(int pos, int value) {
 			// es una hoja, CASO BASE
 			if(start == end) {
+				minValue = value;
 				maxValue=value;
 				return;
 			}
@@ -229,8 +240,27 @@ public class Imperialroads8196 {
 			else
 				rightTree.set(pos, value);
 
+			minValue = Math.min(leftTree.minValue, rightTree.minValue);
 			maxValue=Math.max(leftTree.maxValue, rightTree.maxValue);
 				
+
+		}
+		public int getMin(int low, int high) {
+
+			if(start == low && end == high)
+				return minValue;
+
+			int mid = (start + end) / 2;
+
+			if(high <= mid)
+				return leftTree.getMin(low, high);
+
+			if(low > mid)
+				return rightTree.getMin(low, high);
+
+			int leftMin = leftTree.getMin(low, mid);
+			int rightMin = rightTree.getMin(mid+1, high);
+			return Math.min(leftMin, rightMin);
 
 		}
 		public int getMax(int low, int high) {
@@ -254,3 +284,6 @@ public class Imperialroads8196 {
 		}
 	}
 }
+
+
+
