@@ -1,4 +1,5 @@
 import java.io.*;
+import java.nio.channels.OverlappingFileLockException;
 import java.util.*;
 
 
@@ -33,13 +34,14 @@ public class Imperialroads8196 {
 		@SuppressWarnings("unchecked")
 		public Graf(int v,int e) {
 			this.v=v;
-			this.e=e;
+			this.e=e+1;
 			roots=new int[v];
 			positionway=new int[v];
 			memo=new HashMap<>();
 			edges=new ArrayList<>();
 			edges2=new HashMap<>();
 			aristas=new ArrayList[v];
+			add(0,0,0);
 		}
 		String getKey(int i,int j) {
 			int min=Math.min(j, i);
@@ -68,11 +70,68 @@ public class Imperialroads8196 {
 			aristas[j]=ars1;
 		}
 		int response(int i,int j) {
-			if(i==j) {
+			if(i==j||i==0) {
 				return 0;
 			}else {
 				int p=roots[i];
 				return Math.max(edges2.get(getKey(i, p)).weight,response(p, j));
+			}
+//			int i1=i;
+//			int j1=j;
+//			int res=0;
+//			char[] mar=new char[v];
+//			int maxi=-1;
+//			int maxj=-1;
+//			int common=-1;
+//			boolean stop=false;
+//			while(!stop) {
+//				if(mar[j]!='i') {
+//					mar[j]='j';
+//				}else {
+//					common=j;
+//					break;
+//				}
+//				if(mar[i]!='j') {
+//					mar[i]='i';
+//				}else {
+//					common=i;
+//					break;
+//				}
+//				int pi=roots[i];
+//				int pj=roots[j];
+//				int wip=edges2.get(getKey(i,pi)).weight;
+//				int wjp=edges2.get(getKey(j,pj)).weight;
+//				maxi=Math.max(maxi, wip);
+//				maxj=Math.max(maxj, wjp);
+//				memo.put(getKey(i1, pi),maxi);
+//				memo.put(getKey(j1, pj),maxj);
+//				i=pi;
+//				j=pj;
+//			} 
+//			int maxI=memo.get(getKey(i1, common));
+//			int maxJ=memo.get(getKey(j1, common));
+//			res=Math.max(maxI, maxJ);
+//			return res;
+		}
+		void setRoots(int r){
+			Queue<Integer> cola=new ArrayDeque<>();
+			boolean mar[]=new boolean[v];
+			boolean as[]=new boolean[v];
+			cola.add(r);
+			while(!cola.isEmpty()) {
+				int tmp=cola.poll();
+				if(!mar[tmp]) {
+					mar[tmp]=true;
+					ArrayList<Integer> ad=aristas[tmp];
+					for (int i = 0; i < ad.size(); i++) {
+						int t=ad.get(i);
+						if(!mar[t]&&!as[t]) {
+							roots[t]=tmp;
+							as[t]=true;
+							cola.add(t);
+						}
+					}
+				}
 			}
 		}
 		void way(int a,boolean mar[],int[] i,int way[],HashMap<Integer,Integer> V,HashMap<Integer,Integer> VR) {
@@ -149,7 +208,7 @@ public class Imperialroads8196 {
 	}
 	public static void main(String[] args) throws IOException {
 	BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-	BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(System.out));
+	BufferedWriter bw = new BufferedWriter(new FileWriter("C:/Users/alejandro/git/uvaJudge/UVaJudge/bin/respuesta.txt"));
 	String line;
 	while((line=br.readLine())!=null&&!line.equals("")) {
 		String[] nE=line.split(" ");
@@ -159,10 +218,10 @@ public class Imperialroads8196 {
 
 		for (int i = 0; i < e; i++) {
 			String[] edge=br.readLine().split(" ");
-			int src=Integer.parseInt(edge[0]);
-			int des=Integer.parseInt(edge[1]);
+			int src=Integer.parseInt(edge[0])-1;
+			int des=Integer.parseInt(edge[1])-1;
 			int weight=Integer.parseInt(edge[2]);
-			gf.add(src-1, des-1, weight);
+			gf.add(src, des, weight);
 			
 		}
 		Graf gfT=gf.MST();
@@ -175,25 +234,29 @@ public class Imperialroads8196 {
 		for (int i = 0; i < way.length; i++) {
 			sgt.set(i,way[i]);
 		}
+//		gfT.setRoots(0);
 		int q=Integer.parseInt(br.readLine());
 		for (int i = 0; i < q; i++) {
 			String[] query=br.readLine().split(" ");
-			int s=Integer.parseInt(query[0]);
-			int d=Integer.parseInt(query[1]);
-			if(!gfT.edges2.containsKey(gfT.getKey(s-1, d-1))) {
-				int pS=gfT.positionway[s-1];
-				int pD=gfT.positionway[d-1];
+			int s=Integer.parseInt(query[0])-1;
+			int d=Integer.parseInt(query[1])-1;
+			if(!gfT.edges2.containsKey(gfT.getKey(s, d))) {
+				int pS=gfT.positionway[s];
+				int pD=gfT.positionway[d];
 				int cpV=sgt.getMin(Math.min(pS, pD), Math.max(pS, pD));
 				int cp=inv.get(cpV);
-				int val=Math.max(gfT.response(s-1, cp),gfT.response(d-1, cp));
-				Edge ed=gf.edges2.get(gf.getKey(s-1, d-1));
+				int val=Math.max(gfT.response(s, cp),gfT.response(d, cp));
+				Edge ed=gf.edges2.get(gf.getKey(s, d));
 				boolean exist=ed!=null;
 				int sum=exist?ed.weight:0;
 				int ret=gfT.weight-val+sum;
-				bw.write(ret+"\n");
+				bw.write(ret+"");
+				bw.newLine();
 			}else {
 				int ret=gfT.weight;
-				bw.write(ret+"\n");
+				bw.write(ret+"");
+				bw.newLine();
+
 			}
 		
 		}

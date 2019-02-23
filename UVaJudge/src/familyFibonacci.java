@@ -1,11 +1,10 @@
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.util.Scanner;
+import java.io.*;
+import java.util.*;
 
 public class familyFibonacci {
 	static long mod=1000000009;
 	static long[][] matriz;
+	static HashMap<String, long[][]> memo=new HashMap<>();
 
 	public static long[][] multiplicyMatriz(long[][] m1,long[][] m2){
 		long[][] ret=new long[m1.length][m2[0].length];
@@ -31,7 +30,15 @@ public class familyFibonacci {
 			}else {
 				m=(p-1)/2;
 			}
-			long[][] res=pow(mat, m);
+			String k=mat.length+"-"+p;
+			long[][] res;
+			if(memo.containsKey(k)) {
+				res=memo.get(k);
+			}else {
+				res=pow(mat, m);
+				memo.put(k, res);
+
+			}
 			res=multiplicyMatriz(res, res);
 			if(p%2!=0) {
 				res=multiplicyMatriz(res, matriz);
@@ -43,20 +50,34 @@ public class familyFibonacci {
 		if(f==1||n<2) {
 			return 1;
 		}
-		long[][] mat=new long[f][f];
-		matriz=new long[f][f];
-		for (int i = 0; i < mat.length-1; i++) {
-			mat[i][i+1]=1;
-			matriz[i][i+1]=1;
+		String k=f+"-"+n;
+		if(memo.containsKey(k)) {
+			return memo.get(k)[f-1][f-1];
+		}else {
+			long[][] mat=new long[f][f];
+			matriz=new long[f][f];
+			if(memo.containsKey(f+"-1")) {
+				mat=memo.get(f+"-1");
+				matriz=memo.get(f+"-1");
+			}else {
+				for (int i = 0; i < mat.length-1; i++) {
+					mat[i][i+1]=1;
+					matriz[i][i+1]=1;
 
-		}
-		for (int i = 0; i < mat.length; i++) {
-			matriz[mat.length-1][i]=1;
-			mat[mat.length-1][i]=1;
+				}
+				for (int i = 0; i < mat.length; i++) {
+					matriz[mat.length-1][i]=1;
+					mat[mat.length-1][i]=1;
 
+				}
+				memo.put(f+"-1", matriz);
+			}
+			
+			long[][] resp=pow(mat, n);
+			memo.put(k, resp);
+			return resp[f-1][f-1];
 		}
-		
-		return pow(mat, n)[f-1][f-1];
+
 	}
 	
 	public static void main(String[] args) throws IOException {
@@ -65,7 +86,9 @@ public class familyFibonacci {
 		long n=sc.nextLong();
 		long d=sc.nextLong();
 		while(n!=0||d!=0) {
+//			long time=System.currentTimeMillis();
 			long res=calculate((int) n, d);
+//			long time1=(System.currentTimeMillis()-time)/1000;
 			bw.write(res+"\n");
 			 n=sc.nextLong();
 			 d=sc.nextLong();
